@@ -38,11 +38,19 @@ extern Volkovskyi_ExtPub_Proc:PROTO
     Volkovskyi_Overall_Message     db "%s", 10, "%s", 10, "%s", 10, "%s", 10, "%s", 0
     Volkovskyi_Total_Error_Message db "%s", 10, "%s", 10, "%s", 10, "%s", 10, "%s", 0
     
+    ;Volkovskyi_TMP_FORM        db "Value: %s", 0
         
 .data?
     ; mediate values are DT
     Volkovskyi_Numerator       dt ?
-    Volkovskyi_Denominator     dt ?
+    Volkovskyi_Denominator     dq ?
+    Volkovskyi_TMP_VAR         dq ?
+    Volkovskyi_TMP2_VAR         dq ?
+    Volkovskyi_D_Converter       dq ?
+
+    ; BufferA db 64 dup(?)
+    ; BufferB db 64 dup(?)
+    ; BufferFour db 64 dup(?)
 
     Volkovskyi_Str_A db 20 dup (?)
     Volkovskyi_Str_B db 20 dup (?)
@@ -61,13 +69,15 @@ extern Volkovskyi_ExtPub_Proc:PROTO
     Volkovskyi_Eventual_Sum_Buff    db 75 dup (?)
     Volkovskyi_Overall_Buff         db 400 dup (?)
 
+    ;Volkovskyi_TMP_BUFF        db 30 dup (?)
+
 .code	
     Volkovskyi_A_Arr dq 0.2, 24.8, 16.8, 8.4, 20.4, 5.6
     Volkovskyi_B_Arr dq 1.6, 4.7, 4.2, 0.7, 6.4, -0.1707
     Volkovskyi_C_Arr dq 72.1, 66.6, 19.6, -120.7, -29.2, -29.2 
     Volkovskyi_D_Arr dq 2.2, -2.1, 32.1, 3.3, 0.5, 0.5
 
-    Volkovskyi_Registers_Proc proc
+Volkovskyi_Registers_Proc proc
     fld QWORD ptr [ecx]
     fld QWORD ptr [edx]
     fmul
@@ -79,17 +89,17 @@ Volkovskyi_Stack_Proc proc
     push ebp
     mov ebp, esp
 
-    mov eax, [ebp + 8]
-    fld QWORD ptr [eax]
-    mov ebx, [ebp + 16]
+    mov ebx, [ebp + 8]
     fld QWORD ptr [ebx]
+    mov eax, [ebp + 12]
+    fld QWORD ptr [eax]
     fmul
 
     ; pop 4
     ; ret 4
-    mov esp, ebp
+    ; mov esp, ebp
     pop ebp
-    ret
+    ret 8
 Volkovskyi_Stack_Proc endp
 
 main:   
@@ -120,15 +130,42 @@ main:
         finit
 
         ; get values of arrays
-        fld [Volkovskyi_A_Arr + esi * 8]
-        fld Volkovskyi_Four
-        fld [Volkovskyi_B_Arr + esi * 8]
+        fld qword ptr [Volkovskyi_A_Arr + esi * 8]
+        fstp qword ptr Volkovskyi_A
+        fstp st(0)
+        fld qword ptr [Volkovskyi_B_Arr + esi * 8]
+        fstp qword ptr Volkovskyi_B
+        fstp st(0)
 
         call Volkovskyi_ExtPub_Proc
 
-        ;fstp Volkovskyi_Tan_Arg 
-        fstp Volkovskyi_Denominator
+        ; TMP start                  ; Выделить место для хранения значения
+        ; fstp qword ptr [esp]
+        ; invoke FloatToStr, qword ptr [esp], addr Volkovskyi_TMP_STR
+        ; invoke wsprintf, addr Volkovskyi_TMP_BUFF, addr Volkovskyi_TMP_STR
+        ; invoke MessageBox, 0, addr Volkovskyi_TMP_BUFF, addr Volkovskyi_Caption, 0
 
+
+        ; fstp qword ptr [BufferB]  ; извлечение Volkovskyi_B_Arr
+        ; fstp qword ptr [BufferFour]  ; извлечение Volkovskyi_Four
+        ; fstp qword ptr [BufferA]  ; извлечение Volkovskyi_A_Arr
+
+        ; ; Преобразование чисел в строки
+        ; invoke FloatToStr, ADDR BufferA, BufferA
+        ; invoke FloatToStr, ADDR BufferFour, BufferFour
+        ; invoke FloatToStr, ADDR BufferB, BufferB
+
+        ; ; Подготовка сообщения для MessageBox
+        ; invoke wsprintf, ADDR BufferA, OFFSET BufferA, OFFSET BufferB, OFFSET BufferFour
+
+        ; ; Вывод в MessageBox
+        ; invoke MessageBox, 0, ADDR BufferA, ADDR Volkovskyi_Caption, MB_OK
+
+        ; TMP end
+
+        fstp qword ptr Volkovskyi_Denominator
+
+        fstp st(0)
 
         ; ; st(1) = TanArg, st(0) = 1 
         ; fptan
@@ -137,26 +174,30 @@ main:
         ; fmul
 
         ; upper limit check
-        fld Volkovskyi_Denominator
+        
+        fld qword ptr Volkovskyi_Denominator
         fld Volkovskyi_UpperLimit
-        fcompp
-        fstsw ax
-        sahf
-        ja defAreaViolation
-
-        ; lower limit check
-        fld Volkovskyi_Denominator
-        fld Volkovskyi_LowerLimit
-        fcompp
+        fcom 
         fstsw ax
         sahf
         jb defAreaViolation
-        
-        ; zero compare
+        fstp st(0)
+
+        fld qword ptr Volkovskyi_Denominator
         fcom Volkovskyi_Zero
         fstsw ax
         sahf
-        je denomZeroWindow
+        jz denomZeroWindow
+        fstp st(0)
+
+        ; lower limit check
+        fcom Volkovskyi_LowerLimit
+        fstsw ax
+        sahf
+        jl defAreaViolation
+        
+        ; zero compare
+        
 
         ;fstp Volkovskyi_Denominator
         ;fld Volkovskyi_Denominator
@@ -165,6 +206,7 @@ main:
         ;   Numerator
         ;
 
+        
         lea eax, Volkovskyi_EightyTwo
         lea ebx, [Volkovskyi_D_Arr + esi * 8]
         lea ecx, [Volkovskyi_C_Arr + esi * 8]
@@ -172,11 +214,27 @@ main:
 
         call Volkovskyi_Registers_Proc
 
-        push ebx
-        push eax
+        fstp qword ptr Volkovskyi_TMP_VAR
+
+        fstp st(0)
+
+        fld qword ptr Volkovskyi_D_Arr[esi * 8]
+        fstp qword ptr Volkovskyi_D_Converter 
+        fstp st(0)
+
+        push offset Volkovskyi_EightyTwo
+        push offset Volkovskyi_D_Converter
 
         call Volkovskyi_Stack_Proc
-        fadd
+
+        fstp qword ptr Volkovskyi_TMP2_VAR
+
+        fstp st(0)
+
+        fld qword ptr Volkovskyi_TMP_VAR
+        fld qword ptr Volkovskyi_TMP2_VAR
+        
+        fsub
 
         ; fld Volkovskyi_EightyTwo
         ; fld [Volkovskyi_D_Arr + esi * 8]
@@ -231,6 +289,8 @@ main:
     exampleWindow:
         ; converting
         invoke FloatToStr, Volkovskyi_Eventual_Sum, addr Volkovskyi_Str_Eventual_Sum
+        
+        ; invoke FloatToStr, Volkovskyi_Denominator, addr Volkovskyi_TMP_STR
         ; example number + formula + values + substituted formula + eventual sum 
         invoke wsprintf, addr Volkovskyi_Example_Buff, addr Volkovskyi_Example_Message, edi
         invoke wsprintf, addr Volkovskyi_Values_Buff, addr Volkovskyi_ABCD_Values, addr Volkovskyi_Str_A, 
@@ -239,6 +299,9 @@ main:
                 addr Volkovskyi_Str_C, addr Volkovskyi_Str_D, addr Volkovskyi_Str_A, addr Volkovskyi_Str_B
         invoke wsprintf, addr Volkovskyi_Eventual_Sum_Buff, addr Volkovskyi_Eventual_Message,
                 addr Volkovskyi_Str_Eventual_Sum
+
+        ; invoke wsprintf, addr Volkovskyi_TMP_BUFF, addr Volkovskyi_TMP_FORM, addr Volkovskyi_TMP_STR
+
         invoke wsprintf, addr Volkovskyi_Overall_Buff, addr Volkovskyi_Overall_Message, 
                 addr Volkovskyi_Example_Buff, addr Volkovskyi_Values_Buff, 
                 addr Volkovskyi_Formula, addr Volkovskyi_Value_Formula_Buff, 
