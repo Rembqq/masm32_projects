@@ -15,7 +15,7 @@ public Volkovskyi_ExtPub_Proc
 
         fptan               ; st(1) = TanRes, st(0) = 1
 
-        fstp st(0)                ; TanArg st(1) ==> st(0)
-        ret 
+        fstp st(0)          ; TanArg st(1) ==> st(0)
+        ret                 ; condition of stack #2
     Volkovskyi_ExtPub_Proc endp
 end 

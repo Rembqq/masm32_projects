@@ -82,11 +82,11 @@ Volkovskyi_Registers_Proc proc
     fld QWORD ptr [edx]
     fmul
     
-    ret   
+    ret  ; condition of stack #4
 Volkovskyi_Registers_Proc endp
 
 Volkovskyi_Stack_Proc proc
-    push ebp
+    push ebp ; condition of stack #8
     mov ebp, esp
 
     mov ebx, [ebp + 8]
@@ -98,8 +98,8 @@ Volkovskyi_Stack_Proc proc
     ; pop 4
     ; ret 4
     ; mov esp, ebp
-    pop ebp
-    ret 8
+    pop ebp ; condition of stack #9
+    ret 8 ; condition of stack #10
 Volkovskyi_Stack_Proc endp
 
 main:   
@@ -137,7 +137,7 @@ main:
         fstp qword ptr Volkovskyi_B
         fstp st(0)
 
-        call Volkovskyi_ExtPub_Proc
+        call Volkovskyi_ExtPub_Proc ; condition of stack #1
 
         ; TMP start                  ; Выделить место для хранения значения
         ; fstp qword ptr [esp]
@@ -163,7 +163,7 @@ main:
 
         ; TMP end
 
-        fstp qword ptr Volkovskyi_Denominator
+        fstp qword ptr Volkovskyi_Denominator 
 
         fstp st(0)
 
@@ -212,7 +212,7 @@ main:
         lea ecx, [Volkovskyi_C_Arr + esi * 8]
         lea edx, Volkovskyi_mTwo
 
-        call Volkovskyi_Registers_Proc
+        call Volkovskyi_Registers_Proc ; condition of stack #3
 
         fstp qword ptr Volkovskyi_TMP_VAR
 
@@ -222,10 +222,10 @@ main:
         fstp qword ptr Volkovskyi_D_Converter 
         fstp st(0)
 
-        push offset Volkovskyi_EightyTwo
-        push offset Volkovskyi_D_Converter
+        push offset Volkovskyi_EightyTwo ; condition of stack #5
+        push offset Volkovskyi_D_Converter ; condition of stack #6
 
-        call Volkovskyi_Stack_Proc
+        call Volkovskyi_Stack_Proc ; condition of stack #7
 
         fstp qword ptr Volkovskyi_TMP2_VAR
 
